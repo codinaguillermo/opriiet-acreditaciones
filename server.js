@@ -9,6 +9,7 @@
 const express = require('express');
 const cors = require('cors');
 const acreditacionesRoutes = require('./routes/acreditaciones.routes');
+const equiposRoutes = require('./routes/equipos.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -19,6 +20,7 @@ app.use(express.json());
 
 // Registro de Rutas de la API
 app.use('/api/acreditaciones', acreditacionesRoutes);
+app.use('/api/equipos', equiposRoutes);
 
 /**
  * Ruta: GET /api/health

@@ -10,14 +10,85 @@ const pool = require('../config/db');
 class InscriptoModel {
 
     /**
-     * Propósito: Buscar inscriptos por DNI o coincidencia en el nombre del alumno, 
-     *            uniendo las tablas de escuelas, modalidades y el estado actual de acreditación.
-     * A quién alimenta: Al controlador de búsqueda para el puesto de acreditación en la entrada.
-     * Qué datos retorna: Un Array de objetos JSON con los datos del inscripto, escuela, modalidad y estado de acreditación.
-     * 
-     * @param {string} termino - Término de búsqueda ingresado por el operador (DNI o Nombre/Apellido).
-     * @returns {Promise<Array>} Lista de registros coincidentes obtenidos de MySQL.
+     * Propósito: Obtener únicamente los alumnos que YA pasaron por acreditación (presente = true).
      */
+    static async obtenerAcreditados() {
+        const query = `
+            SELECT 
+                i.id AS inscripto_id,
+                i.alumno,
+                i.dni,
+                i.es_suplente,
+                e.nombre AS escuela,
+                m.nombre AS modalidad,
+                a.fecha_hora
+            FROM inscriptos i
+            JOIN escuelas e ON i.escuela_id = e.id
+            JOIN modalidades m ON i.modalidad_id = m.id
+            JOIN acreditaciones a ON i.id = a.inscripto_id
+            WHERE a.presente = TRUE
+            ORDER BY a.fecha_hora DESC;
+        `;
+        const [rows] = await pool.query(query);
+        return rows;
+    }
+
+    /**
+     * Propósito: Obtener el listado de todas las escuelas existentes para los selectores.
+     * A quién alimenta: Al formulario de alta de un nuevo alumno reemplazante.
+     */
+    static async obtenerEscuelas() {
+        const query = `SELECT id AS escuela_id, nombre AS escuela_nombre FROM escuelas ORDER BY nombre ASC;`;
+        const [rows] = await pool.query(query);
+        return rows;
+    }
+
+    /**
+     * Propósito: Registrar un nuevo alumno inscripto en el sistema (reemplazante).
+     * A quién alimenta: Al controlador de alta de inscriptos.
+     */
+    static async registrarNuevo(datos) {
+        const { alumno, dni, escuela_id, modalidad_id, es_suplente } = datos;
+        
+        const query = `
+            INSERT INTO inscriptos (alumno, dni, escuela_id, modalidad_id, es_suplente)
+            VALUES (?, ?, ?, ?, ?);
+        `;
+        const [resultado] = await pool.query(query, [
+            alumno.trim().toUpperCase(),
+            dni.trim(),
+            escuela_id,
+            modalidad_id,
+            es_suplente ? 1 : 0
+        ]);
+
+        return resultado.insertId;
+    }
+
+    /**
+     * Propósito: Obtener únicamente los alumnos PENDIENTES (la resta/diferencia: inscriptos que NO están acreditados).
+     */
+    static async obtenerPendientes() {
+        const query = `
+            SELECT 
+                i.id AS inscripto_id,
+                i.alumno,
+                i.dni,
+                i.es_suplente,
+                e.nombre AS escuela,
+                m.nombre AS modalidad
+            FROM inscriptos i
+            JOIN escuelas e ON i.escuela_id = e.id
+            JOIN modalidades m ON i.modalidad_id = m.id
+            WHERE i.id NOT IN (
+                SELECT inscripto_id FROM acreditaciones WHERE presente = TRUE
+            )
+            ORDER BY i.alumno ASC;
+        `;
+        const [rows] = await pool.query(query);
+        return rows;
+    }
+
     static async buscarPorTermino(termino) {
         const query = `
             SELECT 
@@ -43,14 +114,6 @@ class InscriptoModel {
         return rows;
     }
 
-    /**
-     * Propósito: Obtener un inscripto específico por su ID primario junto con su información asociada.
-     * A quién alimenta: Al controlador para verificar la existencia del alumno antes de impactar una acreditación.
-     * Qué datos retorna: Un objeto JSON plano con los datos del inscripto y su acreditación, o null si no se encuentra.
-     * 
-     * @param {number} id - ID único del inscripto en la base de datos.
-     * @returns {Promise<Object|null>} Objeto con el registro del alumno o null si no existe.
-     */
     static async obtenerPorId(id) {
         const query = `
             SELECT 
