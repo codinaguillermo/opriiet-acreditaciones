@@ -14,6 +14,9 @@ const equiposRoutes = require('./routes/equipos.routes');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+const torneoRoutes = require('./routes/torneo.routes');
+
+
 // Middlewares globales de seguridad y procesamiento
 app.use(cors());
 app.use(express.json());
@@ -39,3 +42,5 @@ app.get('/api/health', (req, res) => {
 app.listen(PORT, () => {
     console.log(`Servidor backend corriendo de manera profesional en http://localhost:${PORT}`);
 });
+
+app.use('/api/torneo', torneoRoutes);
