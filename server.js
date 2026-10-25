@@ -41,7 +41,7 @@ app.use(express.static(path.join(__dirname, 'dist')));
 
 // 3. Fallback para la SPA (Vue Router)
 // Cualquier petición GET que no coincida con "/api/..." devolverá el index.html del frontend.
-app.get('*', (req, res) => {
+app.get(/.*/, (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
