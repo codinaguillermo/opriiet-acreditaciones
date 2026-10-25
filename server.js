@@ -3,7 +3,7 @@
  *            Configura Express, los middlewares de seguridad globales (CORS, JSON), 
  *            registra las rutas de la API, sirve los archivos estáticos de Vue y arranca el servidor HTTP.
  */
-
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
