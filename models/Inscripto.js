@@ -137,6 +137,30 @@ class InscriptoModel {
         const [rows] = await pool.query(query, [id]);
         return rows.length > 0 ? rows[0] : null;
     }
+
+    /**
+     * Propósito: Actualizar los datos de un alumno inscripto existente.
+     * A quién alimenta: Al controlador de edición de inscriptos.
+     */
+    static async actualizar(id, datos) {
+        const { alumno, dni, escuela_id, modalidad_id, es_suplente } = datos;
+        
+        const query = `
+            UPDATE inscriptos 
+            SET alumno = ?, dni = ?, escuela_id = ?, modalidad_id = ?, es_suplente = ?
+            WHERE id = ?;
+        `;
+        const [resultado] = await pool.query(query, [
+            alumno.trim().toUpperCase(),
+            dni.trim(),
+            escuela_id,
+            modalidad_id,
+            es_suplente ? 1 : 0,
+            id
+        ]);
+
+        return resultado.affectedRows;
+    }
 }
 
 module.exports = InscriptoModel;

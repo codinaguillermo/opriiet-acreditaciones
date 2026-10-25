@@ -46,6 +46,12 @@ router.get('/', AcreditacionController.listarTodos);
  * A quién alimenta: Al botón de check-in / confirmación de asistencia del operador[cite: 5].
  */
 router.post('/', AcreditacionController.acreditarInscripto);
+/**
+ * Ruta: DELETE /api/acreditaciones/inscriptos/:dni
+ * Propósito: Endpoint para eliminar un alumno y todas sus inscripciones por DNI.
+ * A quién alimenta: Al botón de eliminar en la interfaz de Acreditar.vue.
+ */
+router.delete('/inscriptos/:dni', AcreditacionController.eliminarInscriptosPorDni);
 
 /**
  * Ruta: POST /api/acreditaciones/login
