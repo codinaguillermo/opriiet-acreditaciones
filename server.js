@@ -11,6 +11,8 @@ const path = require('path');
 const acreditacionesRoutes = require('./routes/acreditaciones.routes');
 const equiposRoutes = require('./routes/equipos.routes');
 const torneoRoutes = require('./routes/torneo.routes');
+const docentesRoutes = require('./routes/docentes.routes');
+const juecesRoutes = require('./routes/jueces.routes');
 
 const app = express();
 const PORT = process.env.PORT || 80;
@@ -23,7 +25,8 @@ app.use(express.json());
 app.use('/api/acreditaciones', acreditacionesRoutes);
 app.use('/api/equipos', equiposRoutes);
 app.use('/api/torneo', torneoRoutes);
-
+app.use('/api/docentes', docentesRoutes); 
+app.use('/api/jueces', juecesRoutes);
 /**
  * Ruta: GET /api/health
  * Propósito: Verificar el estado operativo del backend.
