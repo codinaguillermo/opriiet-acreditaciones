@@ -54,9 +54,9 @@ class EquipoModel {
             );
             const escuela_id = alumnoPrincipal[0].escuela_id;
 
-            // 3. Insertar el equipo principal[cite: 10]
+            // 3. Insertar el equipo principal con presente por defecto en 0[cite: 10]
             const [resultadoEquipo] = await connection.query(
-                `INSERT INTO equipos (escuela_id, modalidad_id, nombre_equipo) VALUES (?, ?, ?)`,
+                `INSERT INTO equipos (escuela_id, modalidad_id, nombre_equipo, presente) VALUES (?, ?, ?, 0)`,
                 [escuela_id, modalidad_id, nombre_equipo.trim()]
             );
 
@@ -82,7 +82,7 @@ class EquipoModel {
     }
 
     /**
-     * Propósito: Obtener todos los equipos registrados con su escuela, modalidad y listado de alumnos[cite: 10].
+     * Propósito: Obtener todos los equipos registrados con su escuela, modalidad, estado de presencia y listado de alumnos[cite: 10].
      * A quién alimenta: Al panel general de listado de equipos por categoría y modalidad[cite: 10].
      * Qué datos retorna: Un array estructurado con los equipos y sus respectivos integrantes[cite: 10].
      */
@@ -91,6 +91,7 @@ class EquipoModel {
             SELECT 
                 eq.id AS equipo_id,
                 eq.nombre_equipo,
+                eq.presente,
                 e.nombre AS escuela,
                 m.id AS modalidad_id,
                 m.nombre AS modalidad,
