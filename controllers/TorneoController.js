@@ -34,8 +34,9 @@ const TorneoController = {
                 });
             }
 
+            // REGLA DE NEGOCIO: Solo se sortean equipos activos Y que estén físicamente presentes
             const [equipos] = await connection.query(
-                `SELECT id, nombre_equipo FROM equipos WHERE modalidad_id = ? AND estado = 'activo'`,
+                `SELECT id, nombre_equipo FROM equipos WHERE modalidad_id = ? AND estado = 'activo' AND presente = 1`,
                 [modalidad_id]
             );
 
@@ -45,7 +46,7 @@ const TorneoController = {
                 return res.status(200).json({ 
                     exito: false, 
                     estado_modalidad: 'vacante',
-                    error: 'Modalidad vacante: no hay equipos activos registrados.' 
+                    error: 'Modalidad vacante o sin equipos presentes: no hay equipos marcados como presentes para sortear.' 
                 });
             }
 
@@ -56,7 +57,7 @@ const TorneoController = {
                     exito: false, 
                     estado_modalidad: 'campeon_directo',
                     equipo: equipos[0],
-                    error: `Hay un solo equipo (${equipos[0].nombre_equipo}) registrado. ¡Es el campeón directo!` 
+                    error: `Hay un solo equipo presente (${equipos[0].nombre_equipo}). ¡Es el campeón directo!` 
                 });
             }
 
@@ -78,7 +79,6 @@ const TorneoController = {
             if (equiposParaPelear.length % 2 !== 0) {
                 equipoConPaseLibre = equiposParaPelear.pop();
                 
-                // Se registra en la tabla temporal y también en el historial definitivo desde la Ronda 1
                 await connection.query(
                     `INSERT INTO pases_libres (modalidad_id, equipo_id, ronda, grupo) VALUES (?, ?, 1, 'A')`,
                     [modalidad_id, equipoConPaseLibre.id]
@@ -201,7 +201,6 @@ const TorneoController = {
 
             const nuevaRonda = ultimaRonda + 1;
 
-            // 1. Censo de Zona A (0 derrotas)
             const [equiposZonaA] = await connection.query(
                 `SELECT e.id, e.nombre_equipo, esc.nombre as escuela_nombre 
                  FROM equipos e 
@@ -211,7 +210,6 @@ const TorneoController = {
                 [modalidad_id]
             );
 
-            // 2. Censo de Zona B (1 derrota)
             const [equiposZonaB] = await connection.query(
                 `SELECT e.id, e.nombre_equipo, esc.nombre as escuela_nombre 
                  FROM equipos e 
@@ -234,7 +232,6 @@ const TorneoController = {
                 [modalidad_id, ganadorAId === -1 ? null : ganadorAId, ganadorBId === -1 ? null : ganadorBId]
             );
 
-            // CASO 1: AMBOS FINALISTAS LISTOS (Hay Gran Final)
             if (equiposZonaA.length === 1 && equiposZonaB.length === 1) {
                 const [eqA] = await connection.query(`SELECT e.id, e.nombre_equipo, esc.nombre as escuela_nombre FROM equipos e LEFT JOIN escuelas esc ON e.escuela_id = esc.id WHERE e.id = ?`, [ganadorAId]);
                 const [eqB] = await connection.query(`SELECT e.id, e.nombre_equipo, esc.nombre as escuela_nombre FROM equipos e LEFT JOIN escuelas esc ON e.escuela_id = esc.id WHERE e.id = ?`, [ganadorBId]);
@@ -244,7 +241,6 @@ const TorneoController = {
                 return await TorneoController.pelea_Zona_A_vs_ZonaB(modalidad_id, nuevaRonda, eqA[0], eqB[0], forzar_desempate, res);
             }
 
-            // CASO 2: VICTORIA DIRECTA POR FALTA DE RIVALES EN LA OTRA ZONA
             if (equiposZonaA.length === 1 && equiposZonaB.length === 0) {
                 await connection.commit();
                 connection.release();
@@ -267,7 +263,6 @@ const TorneoController = {
                 });
             }
 
-            // CASO 3: TORNEO DESIERTO
             if (equiposZonaA.length === 0 && equiposZonaB.length === 0) {
                 await connection.commit();
                 connection.release();
@@ -277,7 +272,6 @@ const TorneoController = {
                 });
             }
 
-            // CASO 4: EL TORNEO CONTINÚA
             let seGeneraronCombates = false;
 
             if (equiposZonaA.length > 1) {
@@ -315,10 +309,6 @@ const TorneoController = {
         }
     },
 
-    /**
-     * Propósito: Armar los combates de la Zona A aislando a los equipos para que no repiten rivales
-     *            y garantizando que ningún equipo reciba más de un pase libre en todo el torneo.
-     */
     async _procesarZonaA(connection, modalidad_id, nuevaRonda, equiposZonaA) {
         let equiposParaEmparejar = [...equiposZonaA];
         if (equiposParaEmparejar.length < 2) return;
@@ -353,7 +343,6 @@ const TorneoController = {
             );
         }
 
-        // Consultamos la "lista negra" en la tabla histórica definitiva
         const [historialPasesRows] = await connection.query(
             `SELECT equipo_id FROM historial_pases_libres WHERE modalidad_id = ?`,
             [modalidad_id]
@@ -366,9 +355,7 @@ const TorneoController = {
                 [modalidad_id, nuevaRonda]
             );
         } else {
-            // Filtramos a los que NUNCA tuvieron pase libre
             const candidatosPase = equiposParaEmparejar.filter(e => !equiposConPaseHistorico.includes(e.id));
-            
             const poolElegible = candidatosPase.length > 0 ? candidatosPase : equiposParaEmparejar;
 
             const randomIndex = Math.floor(Math.random() * poolElegible.length);
@@ -379,7 +366,6 @@ const TorneoController = {
                 [modalidad_id, nuevaRonda]
             );
             
-            // Registramos el nuevo pase en ambas tablas
             await connection.query(
                 `INSERT INTO pases_libres (modalidad_id, equipo_id, ronda, grupo) VALUES (?, ?, ?, 'A')`,
                 [modalidad_id, nuevoEquipoPaseLibre.id, nuevaRonda]
@@ -445,10 +431,6 @@ const TorneoController = {
         }
     },
 
-    /**
-     * Propósito: Armar los combates de la Zona B (llave de perdedores), asegurando que
-     *            ningún equipo reciba un pase libre si ya lo obtuvo en esta o en otra zona.
-     */
     async _procesarZonaB(connection, modalidad_id, nuevaRonda, equiposZonaB) {
         let equiposParaEmparejar = [...equiposZonaB];
         if (equiposParaEmparejar.length < 2) return;
@@ -483,7 +465,6 @@ const TorneoController = {
             );
         }
 
-        // Consultamos la "lista negra" en la tabla histórica definitiva
         const [historialPasesRowsB] = await connection.query(
             `SELECT equipo_id FROM historial_pases_libres WHERE modalidad_id = ?`,
             [modalidad_id]
@@ -496,9 +477,7 @@ const TorneoController = {
                 [modalidad_id, nuevaRonda]
             );
         } else {
-            // Filtramos a los que NUNCA tuvieron pase libre
             const candidatosPaseB = equiposParaEmparejar.filter(e => !equiposConPaseHistoricoB.includes(e.id));
-            
             const poolElegibleB = candidatosPaseB.length > 0 ? candidatosPaseB : equiposParaEmparejar;
 
             const randomIndex = Math.floor(Math.random() * poolElegibleB.length);
@@ -509,7 +488,6 @@ const TorneoController = {
                 [modalidad_id, nuevaRonda]
             );
             
-            // Registramos el nuevo pase en ambas tablas
             await connection.query(
                 `INSERT INTO pases_libres (modalidad_id, equipo_id, ronda, grupo) VALUES (?, ?, ?, 'B')`,
                 [modalidad_id, nuevoEquipoPaseLibreB.id, nuevaRonda]

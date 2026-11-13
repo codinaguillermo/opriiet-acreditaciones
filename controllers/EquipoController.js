@@ -1,8 +1,8 @@
 /**
  * Propósito: Capa de Controlador para gestionar las operaciones HTTP relacionadas con los equipos,
- *            validando los datos de entrada, aplicando reglas de negocio por modalidad y conectando rutas[cite: 9].
- * A quién alimenta: Al enrutador del backend (equipos.routes.js)[cite: 9].
- * Qué datos retorna: Respuestas HTTP estructuradas en formato JSON (códigos 200, 201, 400 o 500)[cite: 9].
+ *            validando los datos de entrada, aplicando reglas de negocio por modalidad y conectando rutas.
+ * A quién alimenta: Al enrutador del backend (equipos.routes.js).
+ * Qué datos retorna: Respuestas HTTP estructuradas en formato JSON (códigos 200, 201, 400 o 500).
  */
 
 const EquipoModel = require('../models/Equipo');
@@ -11,10 +11,10 @@ const pool = require('../config/db');
 class EquipoController {
 
     /**
-     * Propósito: Obtener el listado completo de equipos registrados agrupados por categoría y modalidad[cite: 9],
+     * Propósito: Obtener el listado completo de equipos registrados agrupados por categoría y modalidad,
      *            incluyendo el detalle de sus escuelas y alumnos integrantes.
-     * A quién alimenta: Al componente frontend del panel de "Equipos y Categorías"[cite: 9].
-     * Qué datos retorna: Un objeto JSON con el estado de éxito y un array de equipos con sus integrantes[cite: 9].
+     * A quién alimenta: Al componente frontend del panel de "Equipos y Categorías".
+     * Qué datos retorna: Un objeto JSON con el estado de éxito y un array de equipos con sus integrantes.
      */
     static async listarEquipos(req, res) {
         try {
@@ -33,9 +33,9 @@ class EquipoController {
     }
 
     /**
-     * Propósito: Registrar un nuevo equipo en la base de datos junto con su lista de alumnos integrantes[cite: 9].
-     * A quién alimenta: Al formulario de creación de equipos en el frontend[cite: 9].
-     * Qué datos retorna: Un objeto JSON confirmando el éxito de la operación y el ID del equipo creado[cite: 9].
+     * Propósito: Registrar un nuevo equipo en la base de datos junto con su lista de alumnos integrantes.
+     * A quién alimenta: Al formulario de creación de equipos en el frontend.
+     * Qué datos retorna: Un objeto JSON confirmando el éxito de la operación y el ID del equipo creado.
      */
     static async crearEquipo(req, res) {
         try {
@@ -73,9 +73,9 @@ class EquipoController {
     }
 
     /**
-     * Propósito: Actualizar los datos de un equipo existente y sincronizar su listado de integrantes[cite: 9].
-     * A quién alimenta: Al módulo de edición de equipos en la interfaz de usuario[cite: 9].
-     * Qué datos retorna: Un objeto JSON confirmando que la actualización se realizó correctamente[cite: 9].
+     * Propósito: Actualizar los datos de un equipo existente y sincronizar su listado de integrantes.
+     * A quién alimenta: Al módulo de edición de equipos en la interfaz de usuario.
+     * Qué datos retorna: Un objeto JSON confirmando que la actualización se realizó correctamente.
      */
     static async actualizarEquipo(req, res) {
         try {
@@ -110,9 +110,41 @@ class EquipoController {
     }
 
     /**
-     * Propósito: Eliminar un equipo registrado del sistema[cite: 9].
-     * A quién alimenta: Al botón de borrado de equipos en la interfaz de gestión[cite: 9].
-     * Qué datos retorna: Un objeto JSON confirmando la eliminación del registro[cite: 9].
+     * Propósito: Actualizar el estado de presencia física de un equipo (1 para presente, 0 para ausente) antes de sortear las rondas.
+     * A quién alimenta: Al botón interactivo de presencia en la vista del listado general de equipos del frontend.
+     * Qué datos retorna: Objeto JSON con el estado de éxito de la operación.
+     */
+    static async cambiarPresencia(req, res) {
+        const { id } = req.params;
+        const { presente } = req.body;
+
+        try {
+            const [resultado] = await pool.query(
+                `UPDATE equipos SET presente = ? WHERE id = ?`,
+                [presente ? 1 : 0, id]
+            );
+
+            if (resultado.affectedRows === 0) {
+                return res.status(404).json({ exito: false, error: 'Equipo no encontrado.' });
+            }
+
+            return res.json({
+                exito: true,
+                mensaje: 'Estado de presencia actualizado correctamente.'
+            });
+        } catch (error) {
+            console.error('Error al actualizar presencia:', error);
+            return res.status(500).json({
+                exito: false,
+                error: 'Error interno al actualizar la presencia del equipo.'
+            });
+        }
+    }
+
+    /**
+     * Propósito: Eliminar un equipo registrado del sistema.
+     * A quién alimenta: Al botón de borrado de equipos en la interfaz de gestión.
+     * Qué datos retorna: Un objeto JSON confirmando la eliminación del registro.
      */
     static async eliminarEquipo(req, res) {
         try {
@@ -138,9 +170,9 @@ class EquipoController {
     }
 
     /**
-     * Propósito: Consultar y listar todas las categorías y sus respectivas modalidades disponibles en la base de datos[cite: 9].
-     * A quién alimenta: Al selector desplegable del formulario de equipos en el frontend[cite: 9].
-     * Qué datos retorna: Un array JSON estructurado con las categorías y sus modalidades hijas[cite: 9].
+     * Propósito: Consultar y listar todas las categorías y sus respectivas modalidades disponibles en la base de datos.
+     * A quién alimenta: Al selector desplegable del formulario de equipos en el frontend.
+     * Qué datos retorna: Un array JSON estructurado con las categorías y sus modalidades hijas.
      */
     static async listarCategoriasModalidades(req, res) {
         try {
