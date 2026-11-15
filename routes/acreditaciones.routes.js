@@ -40,6 +40,8 @@ router.get('/buscar', AcreditacionController.buscarInscriptos);
  */
 router.get('/', AcreditacionController.listarTodos);
 
+router.get('/presentes-sorteo', AcreditacionController.listarAlumnosPresentesParaSorteo);
+
 /**
  * Ruta: POST /api/acreditaciones
  * Propósito: Endpoint para registrar o actualizar la acreditación de un alumno[cite: 5].

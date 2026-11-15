@@ -132,6 +132,53 @@ class AcreditacionController {
     }
 
     /**
+     * Propósito: Obtener el listado de alumnos acreditados y presentes habilitados para el sorteo de premios.
+     * A quién alimenta: Al módulo frontend de Sorteo de Premios.
+     * Qué datos retorna: JSON con el total y array de alumnos con sus respectivas escuelas.
+     */
+    /**
+     * Propósito: Obtener el listado aleatorio de alumnos acreditados y con presencia confirmada 
+     *            para alimentar la ruleta del Sorteo de Premios.
+     * A quién alimenta: Al endpoint GET /api/acreditaciones/presentes-sorteo.
+     * Qué datos retorna: JSON con el estado de éxito, cantidad total y array de participantes (inscripto_id, nombre_completo, dni, escuela_nombre).
+     */
+    /**
+     * Propósito: Obtener el listado de alumnos presentes desde la base de datos real.
+     * A quién alimenta: Al componente frontend SorteoPremiosView.vue vía GET /api/acreditaciones/presentes-sorteo.
+     */
+    static async listarAlumnosPresentesParaSorteo(req, res) {
+        try {
+            const query = `
+                SELECT 
+                    i.id AS inscripto_id,
+                    i.alumno AS nombre_completo,
+                    i.dni,
+                    esc.nombre AS escuela_nombre
+                FROM inscriptos i
+                JOIN acreditaciones a ON i.id = a.inscripto_id
+                JOIN escuelas esc ON i.escuela_id = esc.id
+                WHERE a.presente = 1
+                ORDER BY RAND();
+            `;
+            const [rows] = await pool.query(query);
+
+            return res.status(200).json({
+                exito: true,
+                total: rows.length,
+                data: rows
+            });
+        } catch (error) {
+            console.error('Error al listar alumnos para sorteo:', error);
+            return res.status(500).json({ 
+                exito: false, 
+                error: error.message 
+            });
+        }
+    }
+
+    
+
+    /**
      * Propósito: Eliminar físicamente a un estudiante, sus integraciones a equipos, 
      *            equipos huérfanos resultantes y sus registros de inscripción mediante una unica transacción.
      */
